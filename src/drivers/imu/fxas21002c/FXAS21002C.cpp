@@ -68,7 +68,7 @@ using namespace time_literals;
 FXAS21002C::FXAS21002C(device::Device *interface, const I2CSPIDriverConfig &config) :
 	I2CSPIDriver(config),
 	_interface(interface),
-	_px4_gyro(_interface->get_device_id(), config.rotation),
+	_rotation(config.rotation),
 	_sample_perf(perf_alloc(PC_ELAPSED, MODULE_NAME": read")),
 	_errors(perf_alloc(PC_COUNT, MODULE_NAME": err")),
 	_bad_registers(perf_alloc(PC_COUNT, MODULE_NAME": bad register")),
@@ -186,7 +186,7 @@ int FXAS21002C::set_range(unsigned max_dps)
 
 	set_standby(_current_rate, true);
 
-	_px4_gyro.set_scale(new_range_scale_dps_digit / 180.0f * M_PI_F);
+	_gyro_scale = new_range_scale_dps_digit / 180.0f * M_PI_F);
 
 	modify_reg(FXAS21002C_CTRL_REG0, CTRL_REG0_FS_MASK, bits);
 	set_standby(_current_rate, false);

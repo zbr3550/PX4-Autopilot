@@ -56,7 +56,7 @@ static constexpr uint8_t _checked_registers[] = {
 LSM303D::LSM303D(const I2CSPIDriverConfig &config) :
 	SPI(config),
 	I2CSPIDriver(config),
-	_px4_accel(get_device_id(), config.rotation),
+	_rotation(config.rotation),
 	_px4_mag(get_device_id(), config.rotation),
 	_accel_sample_perf(perf_alloc(PC_ELAPSED, "lsm303d: acc_read")),
 	_mag_sample_perf(perf_alloc(PC_ELAPSED, "lsm303d: mag_read")),
@@ -236,7 +236,7 @@ LSM303D::accel_set_range(unsigned max_g)
 
 	float accel_range_scale = new_scale_g_digit * CONSTANTS_ONE_G;
 
-	_px4_accel.set_scale(accel_range_scale);
+	_accel_scale = accel_range_scale;
 
 	modify_reg(ADDR_CTRL_REG2, clearbits, setbits);
 

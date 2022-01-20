@@ -43,8 +43,7 @@ static constexpr int16_t combine(uint8_t msb, uint8_t lsb)
 LSM9DS1::LSM9DS1(const I2CSPIDriverConfig &config) :
 	SPI(config),
 	I2CSPIDriver(config),
-	_px4_accel(get_device_id(), config.rotation),
-	_px4_gyro(get_device_id(), config.rotation)
+	_rotation(config.rotation)
 {
 	ConfigureSampleRate(_px4_gyro.get_max_rate_hz());
 }
@@ -273,12 +272,12 @@ bool LSM9DS1::Configure()
 	}
 
 	// Gyroscope configuration 2000 degrees/second
-	_px4_gyro.set_scale(math::radians(70.f / 1000.f)); // 70 mdps/LSB
-	_px4_gyro.set_range(math::radians(2000.f));
+	_gyro_scale = math::radians(70.f / 1000.f); // 70 mdps/LSB
+	_gyro_range = math::radians(2000.f));
 
 	// Accelerometer configuration 16 G range
-	_px4_accel.set_scale(0.732f * (CONSTANTS_ONE_G / 1000.f)); // 0.732 mg/LSB
-	_px4_accel.set_range(16.f * CONSTANTS_ONE_G);
+	_accel_scale = 0.732f * (CONSTANTS_ONE_G / 1000.f); // 0.732 mg/LSB
+	_accel_range = 16.f * CONSTANTS_ONE_G;
 
 	return success;
 }

@@ -35,8 +35,6 @@
 
 #include "BMI088.hpp"
 
-#include <lib/drivers/accelerometer/PX4Accelerometer.hpp>
-
 #include "Bosch_BMI088_Accelerometer_Registers.hpp"
 
 namespace Bosch::BMI088::Accelerometer
@@ -58,8 +56,6 @@ private:
 	// static constexpr uint32_t RATE{1600}; // 1600 Hz
 	static constexpr uint32_t RATE{1600}; // 1600 Hz
 	static constexpr float FIFO_SAMPLE_DT{1e6f / RATE};
-
-	static constexpr int32_t FIFO_MAX_SAMPLES{math::min(FIFO::SIZE / sizeof(FIFO::DATA), sizeof(sensor_accel_fifo_s::x) / sizeof(sensor_accel_fifo_s::x[0]))};
 
 	// Transfer data
 	struct FIFOTransferBuffer {
@@ -113,8 +109,6 @@ private:
 	uint8_t CheckSensorErrReg();
 	bool SimpleFIFORead(const hrt_abstime &timestamp_sample);
 	bool NormalRead(const hrt_abstime &timestamp_sample);
-
-	PX4Accelerometer _px4_accel;
 
 	perf_counter_t _bad_register_perf{perf_alloc(PC_COUNT, MODULE_NAME"_accel: bad register")};
 	perf_counter_t _bad_transfer_perf{perf_alloc(PC_COUNT, MODULE_NAME"_accel: bad transfer")};

@@ -38,7 +38,7 @@ constexpr uint8_t L3GD20::_checked_registers[];
 L3GD20::L3GD20(const I2CSPIDriverConfig &config) :
 	SPI(config),
 	I2CSPIDriver(config),
-	_px4_gyro(get_device_id(), config.rotation),
+	_rotation(config.rotation),
 	_sample_perf(perf_alloc(PC_ELAPSED, MODULE_NAME": read")),
 	_errors(perf_alloc(PC_COUNT, MODULE_NAME": err")),
 	_bad_registers(perf_alloc(PC_COUNT, MODULE_NAME": bad_reg")),
@@ -177,7 +177,7 @@ L3GD20::set_range(unsigned max_dps)
 		return -EINVAL;
 	}
 
-	_px4_gyro.set_scale(new_range_scale_dps_digit / 180.0f * M_PI_F);
+	_gyro_scale = new_range_scale_dps_digit / 180.0f * M_PI_F);
 
 	write_checked_reg(ADDR_CTRL_REG4, bits);
 

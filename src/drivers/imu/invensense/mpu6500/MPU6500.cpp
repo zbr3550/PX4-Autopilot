@@ -44,8 +44,7 @@ MPU6500::MPU6500(const I2CSPIDriverConfig &config) :
 	SPI(config),
 	I2CSPIDriver(config),
 	_drdy_gpio(config.drdy_gpio),
-	_px4_accel(get_device_id(), config.rotation),
-	_px4_gyro(get_device_id(), config.rotation)
+	_rotation(config.rotation)
 {
 	if (config.drdy_gpio != 0) {
 		_drdy_missed_perf = perf_alloc(PC_COUNT, MODULE_NAME": DRDY missed");
@@ -324,23 +323,23 @@ void MPU6500::ConfigureAccel()
 
 	switch (ACCEL_FS_SEL) {
 	case ACCEL_FS_SEL_2G:
-		_px4_accel.set_scale(CONSTANTS_ONE_G / 16384.f);
-		_px4_accel.set_range(2.f * CONSTANTS_ONE_G);
+		_accel_scale = CONSTANTS_ONE_G / 16384.f;
+		_accel_range = 2.f * CONSTANTS_ONE_G;
 		break;
 
 	case ACCEL_FS_SEL_4G:
-		_px4_accel.set_scale(CONSTANTS_ONE_G / 8192.f);
-		_px4_accel.set_range(4.f * CONSTANTS_ONE_G);
+		_accel_scale = CONSTANTS_ONE_G / 8192.f;
+		_accel_range = 4.f * CONSTANTS_ONE_G;
 		break;
 
 	case ACCEL_FS_SEL_8G:
-		_px4_accel.set_scale(CONSTANTS_ONE_G / 4096.f);
-		_px4_accel.set_range(8.f * CONSTANTS_ONE_G);
+		_accel_scale = CONSTANTS_ONE_G / 4096.f;
+		_accel_range = 8.f * CONSTANTS_ONE_G;
 		break;
 
 	case ACCEL_FS_SEL_16G:
-		_px4_accel.set_scale(CONSTANTS_ONE_G / 2048.f);
-		_px4_accel.set_range(16.f * CONSTANTS_ONE_G);
+		_accel_scale = CONSTANTS_ONE_G / 2048.f;
+		_accel_range = 16.f * CONSTANTS_ONE_G;
 		break;
 	}
 }
@@ -369,8 +368,8 @@ void MPU6500::ConfigureGyro()
 		break;
 	}
 
-	_px4_gyro.set_scale(math::radians(range_dps / 32768.f));
-	_px4_gyro.set_range(math::radians(range_dps));
+	_gyro_scale = math::radians(range_dps / 32768.f));
+	_gyro_range = math::radians(range_dps));
 }
 
 void MPU6500::ConfigureSampleRate(int sample_rate)
@@ -542,11 +541,6 @@ void MPU6500::FIFOReset()
 	}
 }
 
-static bool fifo_accel_equal(const FIFO::DATA &f0, const FIFO::DATA &f1)
-{
-	return (memcmp(&f0.ACCEL_XOUT_H, &f1.ACCEL_XOUT_H, 6) == 0);
-}
-
 bool MPU6500::ProcessAccel(const hrt_abstime &timestamp_sample, const FIFO::DATA fifo[], const uint8_t samples)
 {
 	sensor_accel_fifo_s accel{};
@@ -555,27 +549,6 @@ bool MPU6500::ProcessAccel(const hrt_abstime &timestamp_sample, const FIFO::DATA
 	accel.dt = FIFO_SAMPLE_DT * SAMPLES_PER_TRANSFER;
 
 	bool bad_data = false;
-
-	// accel data is doubled in FIFO, but might be shifted
-	int accel_first_sample = 1;
-
-	if (samples >= 4) {
-		if (fifo_accel_equal(fifo[0], fifo[1]) && fifo_accel_equal(fifo[2], fifo[3])) {
-			// [A0, A1, A2, A3]
-			//  A0==A1, A2==A3
-			accel_first_sample = 1;
-
-		} else if (fifo_accel_equal(fifo[1], fifo[2])) {
-			// [A0, A1, A2, A3]
-			//  A0, A1==A2, A3
-			accel_first_sample = 0;
-
-		} else {
-			// no matching accel samples is an error
-			bad_data = true;
-			perf_count(_bad_transfer_perf);
-		}
-	}
 
 	for (int i = accel_first_sample; i < samples; i = i + SAMPLES_PER_TRANSFER) {
 		int16_t accel_x = combine(fifo[i].ACCEL_XOUT_H, fifo[i].ACCEL_XOUT_L);

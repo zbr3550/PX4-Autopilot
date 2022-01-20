@@ -56,8 +56,7 @@ using namespace time_literals;
 ADIS16477::ADIS16477(const I2CSPIDriverConfig &config) :
 	SPI(config),
 	I2CSPIDriver(config),
-	_px4_accel(get_device_id(), config.rotation),
-	_px4_gyro(get_device_id(), config.rotation),
+	_rotation(config.rotation),
 	_sample_perf(perf_alloc(PC_ELAPSED, MODULE_NAME": read")),
 	_bad_transfers(perf_alloc(PC_COUNT, MODULE_NAME": bad transfers")),
 	_drdy_gpio(config.drdy_gpio)
@@ -67,8 +66,8 @@ ADIS16477::ADIS16477(const I2CSPIDriverConfig &config) :
 	px4_arch_configgpio(GPIO_SPI1_RESET_ADIS16477);
 #endif // GPIO_SPI1_RESET_ADIS16477
 
-	_px4_accel.set_scale(1.25f * CONSTANTS_ONE_G / 1000.0f); // accel 1.25 mg/LSB
-	_px4_gyro.set_scale(math::radians(0.025f)); // gyro 0.025 °/sec/LSB
+	_accel_scale = 1.25f * CONSTANTS_ONE_G / 1000.0f; // accel 1.25 mg/LSB
+	_gyro_scale = math::radians(0.025f); // gyro 0.025 °/sec/LSB
 }
 
 ADIS16477::~ADIS16477()

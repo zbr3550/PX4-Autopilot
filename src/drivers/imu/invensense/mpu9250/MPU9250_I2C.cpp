@@ -44,8 +44,7 @@ MPU9250_I2C::MPU9250_I2C(const I2CSPIDriverConfig &config) :
 	I2C(config),
 	I2CSPIDriver(config),
 	_drdy_gpio(config.drdy_gpio),
-	_px4_accel(get_device_id(), config.rotation),
-	_px4_gyro(get_device_id(), config.rotation)
+	_rotation(config.rotation)
 {
 	if (_drdy_gpio != 0) {
 		_drdy_missed_perf = perf_alloc(PC_COUNT, MODULE_NAME": DRDY missed");
@@ -292,23 +291,23 @@ void MPU9250_I2C::ConfigureAccel()
 
 	switch (ACCEL_FS_SEL) {
 	case ACCEL_FS_SEL_2G:
-		_px4_accel.set_scale(CONSTANTS_ONE_G / 16384.f);
-		_px4_accel.set_range(2.f * CONSTANTS_ONE_G);
+		_accel_scale = CONSTANTS_ONE_G / 16384.f;
+		_accel_range = 2.f * CONSTANTS_ONE_G;
 		break;
 
 	case ACCEL_FS_SEL_4G:
-		_px4_accel.set_scale(CONSTANTS_ONE_G / 8192.f);
-		_px4_accel.set_range(4.f * CONSTANTS_ONE_G);
+		_accel_scale = CONSTANTS_ONE_G / 8192.f;
+		_accel_range = 4.f * CONSTANTS_ONE_G;
 		break;
 
 	case ACCEL_FS_SEL_8G:
-		_px4_accel.set_scale(CONSTANTS_ONE_G / 4096.f);
-		_px4_accel.set_range(8.f * CONSTANTS_ONE_G);
+		_accel_scale = CONSTANTS_ONE_G / 4096.f;
+		_accel_range = 8.f * CONSTANTS_ONE_G;
 		break;
 
 	case ACCEL_FS_SEL_16G:
-		_px4_accel.set_scale(CONSTANTS_ONE_G / 2048.f);
-		_px4_accel.set_range(16.f * CONSTANTS_ONE_G);
+		_accel_scale = CONSTANTS_ONE_G / 2048.f;
+		_accel_range = 16.f * CONSTANTS_ONE_G;
 		break;
 	}
 }
@@ -337,8 +336,8 @@ void MPU9250_I2C::ConfigureGyro()
 		break;
 	}
 
-	_px4_gyro.set_scale(math::radians(range_dps / 32768.f));
-	_px4_gyro.set_range(math::radians(range_dps));
+	_gyro_scale = math::radians(range_dps / 32768.f));
+	_gyro_range = math::radians(range_dps));
 }
 
 void MPU9250_I2C::ConfigureSampleRate(int sample_rate)

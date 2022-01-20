@@ -1,6 +1,6 @@
 /****************************************************************************
  *
- *   Copyright (c) 2021 PX4 Development Team. All rights reserved.
+ *   Copyright (c) 2021-2022 PX4 Development Team. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -99,9 +99,8 @@ ADIS16448::ADIS16448(const I2CSPIDriverConfig &config) :
 	SPI(config),
 	I2CSPIDriver(config),
 	_drdy_gpio(config.drdy_gpio), // TODO: DRDY disabled
-	_px4_accel(get_device_id(), config.rotation),
-	_px4_gyro(get_device_id(), config.rotation),
-	_px4_mag(get_device_id(), config.rotation)
+	_px4_mag(get_device_id(), config.rotation),
+	_rotation(config.rotation)
 {
 	if (_drdy_gpio != 0) {
 		_drdy_missed_perf = perf_alloc(PC_COUNT, MODULE_NAME": DRDY missed");
@@ -392,14 +391,9 @@ void ADIS16448::RunImpl()
 				if (publish_data) {
 
 					const uint32_t error_count = perf_event_count(_bad_register_perf) + perf_event_count(_bad_transfer_perf);
-					_px4_accel.set_error_count(error_count);
-					_px4_gyro.set_error_count(error_count);
 
 					// temperature 0.07386°C/LSB, 31°C = 0x000
 					const float temperature = (convert12BitToINT16(buffer.TEMP_OUT) * 0.07386f) + 31.f;
-
-					_px4_accel.set_temperature(temperature);
-					_px4_gyro.set_temperature(temperature);
 
 					bool imu_updated = false;
 
@@ -430,8 +424,8 @@ void ADIS16448::RunImpl()
 					}
 
 					if (imu_updated) {
-						_px4_accel.update(timestamp_sample, accel_x, accel_y, accel_z);
-						_px4_gyro.update(timestamp_sample, gyro_x, gyro_y, gyro_z);
+						//_px4_accel.update(timestamp_sample, accel_x, accel_y, accel_z);
+						//_px4_gyro.update(timestamp_sample, gyro_x, gyro_y, gyro_z);
 					}
 
 					// DIAG_STAT bit 7: New data, xMAGN_OUT/BARO_OUT
@@ -534,12 +528,12 @@ bool ADIS16448::Configure()
 		}
 	}
 
-	_px4_accel.set_scale(0.833f * 1e-3f * CONSTANTS_ONE_G); // 0.833 mg/LSB
-	_px4_gyro.set_scale(math::radians(0.04f));              // 0.04 °/sec/LSB
+	_accel_scale = 0.833f * 1e-3f * CONSTANTS_ONE_G; // 0.833 mg/LSB
+	_gyro_scale = math::radians(0.04f);              // 0.04 °/sec/LSB
 	_px4_mag.set_scale(142.9f * 1e-6f);                     // μgauss/LSB
 
-	_px4_accel.set_range(18.f * CONSTANTS_ONE_G);
-	_px4_gyro.set_range(math::radians(1000.f));
+	_accel_range = 18.f * CONSTANTS_ONE_G;
+	_gyro_range = math::radians(1000.f);
 
 	return success;
 }

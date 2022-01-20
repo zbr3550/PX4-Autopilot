@@ -42,7 +42,7 @@ namespace Bosch::BMI088::Gyroscope
 
 BMI088_Gyroscope::BMI088_Gyroscope(const I2CSPIDriverConfig &config) :
 	BMI088(config),
-	_px4_gyro(get_device_id(), config.rotation)
+	_rotation(config.rotation)
 {
 	if (config.drdy_gpio != 0) {
 		_drdy_missed_perf = perf_alloc(PC_COUNT, MODULE_NAME"_gyro: DRDY missed");
@@ -182,30 +182,30 @@ void BMI088_Gyroscope::ConfigureGyro()
 
 	switch (GYRO_RANGE) {
 	case gyro_range_2000_dps:
-		_px4_gyro.set_scale(math::radians(1.f / 16.384f));
-		_px4_gyro.set_range(math::radians(2000.f));
+		_gyro_scale = math::radians(1.f / 16.384f);
+		_gyro_range = math::radians(2000.f));
 		break;
 
 	case gyro_range_1000_dps:
-		_px4_gyro.set_scale(math::radians(1.f / 32.768f));
-		_px4_gyro.set_range(math::radians(1000.f));
-		break;
+			_gyro_scale = math::radians(1.f / 32.768f);
+			_gyro_range = math::radians(1000.f));
+			break;
 
-	case gyro_range_500_dps:
-		_px4_gyro.set_scale(math::radians(1.f / 65.536f));
-		_px4_gyro.set_range(math::radians(500.f));
-		break;
+		case gyro_range_500_dps:
+				_gyro_scale = math::radians(1.f / 65.536f);
+				_gyro_range = math::radians(500.f));
+				break;
 
-	case gyro_range_250_dps:
-		_px4_gyro.set_scale(math::radians(1.f / 131.072f));
-		_px4_gyro.set_range(math::radians(250.f));
-		break;
+			case gyro_range_250_dps:
+					_gyro_scale = math::radians(1.f / 131.072f);
+					_gyro_range = math::radians(250.f));
+					break;
 
-	case gyro_range_125_dps:
-		_px4_gyro.set_scale(math::radians(1.f / 262.144f));
-		_px4_gyro.set_range(math::radians(125.f));
-		break;
-	}
+				case gyro_range_125_dps:
+						_gyro_scale = math::radians(1.f / 262.144f);
+						_gyro_range = math::radians(125.f));
+						break;
+					}
 }
 
 void BMI088_Gyroscope::ConfigureSampleRate(int sample_rate)

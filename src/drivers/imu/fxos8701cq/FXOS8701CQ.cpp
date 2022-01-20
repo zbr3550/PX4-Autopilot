@@ -195,7 +195,7 @@ FXOS8701CQ::accel_set_range(unsigned max_g)
 
 	modify_reg(FXOS8701CQ_XYZ_DATA_CFG, XYZ_DATA_CFG_FS_MASK, setbits);
 
-	_px4_accel.set_scale(accel_range_scale);
+	_accel_scale = accel_range_scale;
 
 	return OK;
 }

@@ -64,8 +64,6 @@ px4_add_module(
 		mavlink_c_generate
 		conversion
 		geo
-		drivers_accelerometer
-		drivers_gyroscope
 		drivers_magnetometer
 	)
 target_include_directories(modules__simulator INTERFACE ${CMAKE_BINARY_DIR}/mavlink)

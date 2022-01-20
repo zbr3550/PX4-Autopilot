@@ -44,8 +44,7 @@ ADIS16470::ADIS16470(const I2CSPIDriverConfig &config) :
 	SPI(config),
 	I2CSPIDriver(config),
 	_drdy_gpio(config.drdy_gpio),
-	_px4_accel(get_device_id(), config.rotation),
-	_px4_gyro(get_device_id(), config.rotation)
+	_rotation(config.rotation)
 {
 	if (_drdy_gpio != 0) {
 		_drdy_missed_perf = perf_alloc(PC_COUNT, MODULE_NAME": DRDY missed");
@@ -295,9 +294,9 @@ void ADIS16470::RunImpl()
 				}
 
 				// temperature 1 LSB = 0.1°C
-				const float temperature = buffer.TEMP_OUT * 0.1f;
-				_px4_accel.set_temperature(temperature);
-				_px4_gyro.set_temperature(temperature);
+				//const float temperature = buffer.TEMP_OUT * 0.1f;
+				//_px4_accel.set_temperature(temperature);
+				//_px4_gyro.set_temperature(temperature);
 
 
 				int16_t accel_x = buffer.X_ACCL_OUT;
@@ -309,7 +308,7 @@ void ADIS16470::RunImpl()
 				accel_y = (accel_y == INT16_MIN) ? INT16_MAX : -accel_y;
 				accel_z = (accel_z == INT16_MIN) ? INT16_MAX : -accel_z;
 
-				_px4_accel.update(timestamp_sample, accel_x, accel_y, accel_z);
+				//_px4_accel.update(timestamp_sample, accel_x, accel_y, accel_z);
 
 
 				int16_t gyro_x = buffer.X_GYRO_OUT;
@@ -319,7 +318,7 @@ void ADIS16470::RunImpl()
 				//  flip y & z to publish right handed with z down (x forward, y right, z down)
 				gyro_y = (gyro_y == INT16_MIN) ? INT16_MAX : -gyro_y;
 				gyro_z = (gyro_z == INT16_MIN) ? INT16_MAX : -gyro_z;
-				_px4_gyro.update(timestamp_sample, gyro_x, gyro_y, gyro_z);
+				//_px4_gyro.update(timestamp_sample, gyro_x, gyro_y, gyro_z);
 
 				success = true;
 
@@ -375,13 +374,13 @@ bool ADIS16470::Configure()
 		}
 	}
 
-	_px4_accel.set_scale(CONSTANTS_ONE_G / 2048.f);
-	_px4_accel.set_range(40.f * CONSTANTS_ONE_G);
-	_px4_gyro.set_scale(math::radians(1.f / 0.1f)); // 1 LSB = 0.1°/sec
-	_px4_gyro.set_range(math::radians(2000.f));
+	_accel_scale = CONSTANTS_ONE_G / 2048.f;
+	//_accel_range = 40.f * CONSTANTS_ONE_G;
+	_gyro_scale = math::radians(2000.f / 32768.f);
+	//_gyro_range = math::radians(2000.f));
 
-	_px4_accel.set_scale(1.25f * CONSTANTS_ONE_G / 1000.0f); // accel 1.25 mg/LSB
-	_px4_gyro.set_scale(math::radians(0.025f)); // gyro 0.025 °/sec/LSB
+	_accel_scale = 1.25f * CONSTANTS_ONE_G / 1000.0f; // accel 1.25 mg/LSB
+	_gyro_scale = math::radians(0.025f); // gyro 0.025 °/sec/LSB
 
 	return success;
 }

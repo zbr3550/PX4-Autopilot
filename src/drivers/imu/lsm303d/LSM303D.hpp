@@ -42,7 +42,6 @@
 #include <geo/geo.h>
 #include <perf/perf_counter.h>
 #include <px4_platform_common/i2c_spi_buses.h>
-#include <lib/drivers/accelerometer/PX4Accelerometer.hpp>
 #include <lib/drivers/magnetometer/PX4Magnetometer.hpp>
 
 /* SPI protocol address bits */
@@ -261,10 +260,6 @@ private:
 	 * @return		OK if the value can be supported.
 	 */
 	int			mag_set_samplerate(unsigned frequency);
-
-
-	PX4Accelerometer	_px4_accel;
-	PX4Magnetometer		_px4_mag;
 
 	unsigned		_call_accel_interval{1000000 / LSM303D_ACCEL_DEFAULT_RATE};
 	unsigned		_call_mag_interval{1000000 / LSM303D_MAG_DEFAULT_RATE};

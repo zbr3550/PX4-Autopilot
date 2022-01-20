@@ -43,9 +43,7 @@
 #include "InvenSense_ICM42670P_registers.hpp"
 
 #include <drivers/drv_hrt.h>
-#include <lib/drivers/accelerometer/PX4Accelerometer.hpp>
 #include <lib/drivers/device/spi.h>
-#include <lib/drivers/gyroscope/PX4Gyroscope.hpp>
 #include <lib/perf/perf_counter.h>
 #include <px4_platform_common/atomic.h>
 #include <px4_platform_common/i2c_spi_buses.h>
@@ -134,9 +132,6 @@ private:
 	void UpdateTemperature();
 
 	const spi_drdy_gpio_t _drdy_gpio;
-
-	PX4Accelerometer _px4_accel;
-	PX4Gyroscope _px4_gyro;
 
 	perf_counter_t _bad_register_perf{perf_alloc(PC_COUNT, MODULE_NAME": bad register")};
 	perf_counter_t _bad_transfer_perf{perf_alloc(PC_COUNT, MODULE_NAME": bad transfer")};

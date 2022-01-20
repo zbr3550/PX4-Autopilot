@@ -1,6 +1,6 @@
 /****************************************************************************
  *
- *   Copyright (c) 2020-2021 PX4 Development Team. All rights reserved.
+ *   Copyright (c) 2020-2022 PX4 Development Team. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -39,15 +39,16 @@ using namespace time_literals;
 
 namespace Bosch::BMI088::Accelerometer
 {
+
 BMI088_Accelerometer::BMI088_Accelerometer(const I2CSPIDriverConfig &config) :
 	BMI088(config),
-	_px4_accel(get_device_id(), config.rotation)
+	_rotation(config.rotation)
 {
 	if (config.drdy_gpio != 0) {
 		_drdy_missed_perf = perf_alloc(PC_COUNT, MODULE_NAME"_accel: DRDY missed");
 	}
 
-	ConfigureSampleRate(1600);
+	ConfigureSampleRate(RATE);
 }
 
 BMI088_Accelerometer::~BMI088_Accelerometer()
@@ -204,25 +205,25 @@ void BMI088_Accelerometer::ConfigureAccel()
 
 	switch (ACC_RANGE) {
 	case acc_range_3g:
-		_px4_accel.set_scale(CONSTANTS_ONE_G * (powf(2, ACC_RANGE + 1) * 1.5f) / 32768.f);
-		_px4_accel.set_range(3.f * CONSTANTS_ONE_G);
+		_accel_scale = CONSTANTS_ONE_G * (powf(2, ACC_RANGE + 1) * 1.5f) / 32768.f);
+		_accel_range = 3.f * CONSTANTS_ONE_G;
 		break;
 
 	case acc_range_6g:
-		_px4_accel.set_scale(CONSTANTS_ONE_G * (powf(2, ACC_RANGE + 1) * 1.5f) / 32768.f);
-		_px4_accel.set_range(6.f * CONSTANTS_ONE_G);
-		break;
+			_accel_scale = CONSTANTS_ONE_G * (powf(2, ACC_RANGE + 1) * 1.5f) / 32768.f);
+			_accel_range = 6.f * CONSTANTS_ONE_G;
+			break;
 
-	case acc_range_12g:
-		_px4_accel.set_scale(CONSTANTS_ONE_G * (powf(2, ACC_RANGE + 1) * 1.5f) / 32768.f);
-		_px4_accel.set_range(12.f * CONSTANTS_ONE_G);
-		break;
+		case acc_range_12g:
+				_accel_scale = CONSTANTS_ONE_G * (powf(2, ACC_RANGE + 1) * 1.5f) / 32768.f);
+				_accel_range = 12.f * CONSTANTS_ONE_G;
+				break;
 
-	case acc_range_24g:
-		_px4_accel.set_scale(CONSTANTS_ONE_G * (powf(2, ACC_RANGE + 1) * 1.5f) / 32768.f);
-		_px4_accel.set_range(24.f * CONSTANTS_ONE_G);
-		break;
-	}
+			case acc_range_24g:
+					_accel_scale = CONSTANTS_ONE_G * (powf(2, ACC_RANGE + 1) * 1.5f) / 32768.f);
+					_accel_range = 24.f * CONSTANTS_ONE_G;
+					break;
+				}
 }
 
 void BMI088_Accelerometer::ConfigureSampleRate(int sample_rate)

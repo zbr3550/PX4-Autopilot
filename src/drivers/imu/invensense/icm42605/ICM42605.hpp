@@ -43,9 +43,7 @@
 #include "InvenSense_ICM42605_registers.hpp"
 
 #include <drivers/drv_hrt.h>
-#include <lib/drivers/accelerometer/PX4Accelerometer.hpp>
 #include <lib/drivers/device/spi.h>
-#include <lib/drivers/gyroscope/PX4Gyroscope.hpp>
 #include <lib/geo/geo.h>
 #include <lib/perf/perf_counter.h>
 #include <px4_platform_common/atomic.h>
@@ -75,7 +73,7 @@ private:
 	static constexpr float ACCEL_RATE{1e6f / FIFO_SAMPLE_DT};
 
 	// maximum FIFO samples per transfer is limited to the size of sensor_accel_fifo/sensor_gyro_fifo
-	static constexpr int32_t FIFO_MAX_SAMPLES{math::min(FIFO::SIZE / sizeof(FIFO::DATA), sizeof(sensor_gyro_fifo_s::x) / sizeof(sensor_gyro_fifo_s::x[0]), sizeof(sensor_accel_fifo_s::x) / sizeof(sensor_accel_fifo_s::x[0]) * (int)(GYRO_RATE / ACCEL_RATE))};
+	static constexpr int32_t FIFO_MAX_SAMPLES{math::min(FIFO::SIZE / sizeof(FIFO::DATA), (size_t)sensor_imu_fifo_s::FIFO_SIZE)};
 
 	// Transfer data
 	struct FIFOTransferBuffer {
@@ -128,9 +126,6 @@ private:
 	void UpdateTemperature();
 
 	const spi_drdy_gpio_t _drdy_gpio;
-
-	PX4Accelerometer _px4_accel;
-	PX4Gyroscope _px4_gyro;
 
 	perf_counter_t _bad_register_perf{perf_alloc(PC_COUNT, MODULE_NAME": bad register")};
 	perf_counter_t _bad_transfer_perf{perf_alloc(PC_COUNT, MODULE_NAME": bad transfer")};

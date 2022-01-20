@@ -41,7 +41,6 @@
 
 #include <drivers/device/spi.h>
 #include <lib/conversion/rotation.h>
-#include <lib/drivers/gyroscope/PX4Gyroscope.hpp>
 #include <perf/perf_counter.h>
 #include <px4_platform_common/getopt.h>
 #include <px4_platform_common/i2c_spi_buses.h>
@@ -183,8 +182,6 @@ protected:
 	int		probe() override;
 
 private:
-
-	PX4Gyroscope		_px4_gyro;
 
 	unsigned		_orientation{SENSOR_BOARD_ROTATION_DEFAULT};
 

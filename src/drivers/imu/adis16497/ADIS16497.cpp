@@ -73,8 +73,7 @@ using namespace time_literals;
 ADIS16497::ADIS16497(const I2CSPIDriverConfig &config) :
 	SPI(config),
 	I2CSPIDriver(config),
-	_px4_accel(get_device_id(), config.rotation),
-	_px4_gyro(get_device_id(), config.rotation),
+	_rotation(config.rotation),
 	_sample_perf(perf_alloc(PC_ELAPSED, MODULE_NAME": read")),
 	_bad_transfers(perf_alloc(PC_COUNT, MODULE_NAME": bad transfers")),
 	_drdy_gpio(config.drdy_gpio)
@@ -308,23 +307,23 @@ ADIS16497::self_test()
 bool
 ADIS16497::set_measurement_range(uint16_t model)
 {
-	_px4_accel.set_scale(1.25f * CONSTANTS_ONE_G / 1000.0f); // 1.25 mg/LSB
-	_px4_accel.set_range(40.0f * CONSTANTS_ONE_G); // 40g
+	_accel_scale = 1.25f * CONSTANTS_ONE_G / 1000.0f; // 1.25 mg/LSB
+	_accel_range = 40.0f * CONSTANTS_ONE_G; // 40g
 
 	switch (model) {
 	case RANG_MDL_1BMLZ:
-		_px4_gyro.set_scale(math::radians(0.00625f)); // 0.00625 °/sec/LSB
-		_px4_gyro.set_range(math::radians(125.0f)); // 125 °/s
+		_gyro_scale = math::radians(0.00625f); // 0.00625 °/sec/LSB
+		_gyro_range = math::radians(125.0f); // 125 °/s
 		break;
 
 	case RANG_MDL_2BMLZ:
-		_px4_gyro.set_scale(math::radians(0.025f)); // 0.025 °/sec/LSB
-		_px4_gyro.set_range(math::radians(450.0f)); // 450 °/s
+		_gyro_scale = math::radians(0.025f); // 0.025 °/sec/LSB
+		_gyro_range = math::radians(450.0f); // 450 °/s
 		break;
 
 	case RANG_MDL_3BMLZ:
-		_px4_gyro.set_scale(math::radians(0.1f)); // 0.1 °/sec/LSB
-		_px4_gyro.set_range(math::radians(2000.0f)); // 2000 °/s
+		_gyro_scale = math::radians(0.1f); // 0.1 °/sec/LSB
+		_gyro_range = math::radians(2000.0f); // 2000 °/s
 		break;
 
 	default:

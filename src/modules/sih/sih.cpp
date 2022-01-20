@@ -65,8 +65,6 @@ Sih::~Sih()
 
 void Sih::run()
 {
-	_px4_accel.set_temperature(T1_C);
-	_px4_gyro.set_temperature(T1_C);
 	_px4_mag.set_temperature(T1_C);
 
 	parameters_updated();
@@ -224,8 +222,8 @@ void Sih::sensor_step()
 	reconstruct_sensors_signals();
 
 	// update IMU every iteration
-	_px4_accel.update(_now, _acc(0), _acc(1), _acc(2));
-	_px4_gyro.update(_now, _gyro(0), _gyro(1), _gyro(2));
+	//_px4_accel.update(_now, _acc(0), _acc(1), _acc(2));
+	//_px4_gyro.update(_now, _gyro(0), _gyro(1), _gyro(2));
 
 	// magnetometer published at 50 Hz
 	if (_now - _mag_time >= 20_ms
