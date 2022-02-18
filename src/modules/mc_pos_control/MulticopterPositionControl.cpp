@@ -190,15 +190,37 @@ void MulticopterPositionControl::parameters_update(bool force)
 					    "Manual speed has been constrained by maximum speed", _param_mpc_xy_vel_max.get());
 		}
 
+		if (_param_mpc_vel_man_back.get() > _param_mpc_vel_manual.get()) {
+			_param_mpc_vel_man_back.set(_param_mpc_vel_manual.get());
+			_param_mpc_vel_man_back.commit();
+			mavlink_log_critical(&_mavlink_log_pub, "Manual backward speed has been constrained by max speed\t");
+			/* EVENT
+			 * @description <param>MPC_VEL_MAN_BACK</param> is set to {1:.0}.
+			 */
+			events::send<float>(events::ID("mc_pos_ctrl_man_vel_back_set"), events::Log::Warning,
+					    "Manual backward speed has been constrained by maximum speed", _param_mpc_vel_manual.get());
+		}
+
+		if (_param_mpc_vel_man_side.get() > _param_mpc_vel_manual.get()) {
+			_param_mpc_vel_man_side.set(_param_mpc_vel_manual.get());
+			_param_mpc_vel_man_side.commit();
+			mavlink_log_critical(&_mavlink_log_pub, "Manual sideways speed has been constrained by forward speed\t");
+			/* EVENT
+			 * @description <param>MPC_VEL_MAN_SIDE</param> is set to {1:.0}.
+			 */
+			events::send<float>(events::ID("mc_pos_ctrl_man_vel_side_set"), events::Log::Warning,
+					    "Manual sideways speed has been constrained by forward speed", _param_mpc_vel_manual.get());
+		}
+
 		if (_param_mpc_z_v_auto_up.get() > _param_mpc_z_vel_max_up.get()) {
 			_param_mpc_z_v_auto_up.set(_param_mpc_z_vel_max_up.get());
 			_param_mpc_z_v_auto_up.commit();
-			mavlink_log_critical(&_mavlink_log_pub, "Ascent speed has been constrained by max speed\t");
+			mavlink_log_critical(&_mavlink_log_pub, "Ascent speed has been constrained by forward speed\t");
 			/* EVENT
 			 * @description <param>MPC_Z_V_AUTO_UP</param> is set to {1:.0}.
 			 */
 			events::send<float>(events::ID("mc_pos_ctrl_up_vel_set"), events::Log::Warning,
-					    "Ascent speed has been constrained by max speed", _param_mpc_z_vel_max_up.get());
+					    "Ascent speed has been constrained by forward speed", _param_mpc_z_vel_max_up.get());
 		}
 
 		if (_param_mpc_z_v_auto_dn.get() > _param_mpc_z_vel_max_dn.get()) {
