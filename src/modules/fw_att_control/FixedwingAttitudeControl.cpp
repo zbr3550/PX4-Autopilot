@@ -552,8 +552,13 @@ void FixedwingAttitudeControl::Run()
 						}
 					}
 
+					vehicle_angular_acceleration_s v_angular_acceleration{};
+					// _vehicle_angular_acceleration_sub.copy(&v_angular_acceleration);
+					const Vector3f angular_accel{v_angular_acceleration.xyz};
+
 					/* Run attitude RATE controllers which need the desired attitudes from above, add trim */
-					float roll_u = _roll_ctrl.control_euler_rate(dt, control_input, bodyrate_ff(0));
+					const Vector3f att_control = _rate_control.update(rates, rates_setpoint, angular_accel, dt, _landed);
+					float roll_u = att_control(0);
 					_actuator_controls.control[actuator_controls_s::INDEX_ROLL] =
 						(PX4_ISFINITE(roll_u)) ? roll_u + trim_roll : trim_roll;
 
@@ -561,7 +566,7 @@ void FixedwingAttitudeControl::Run()
 						_roll_ctrl.reset_integrator();
 					}
 
-					float pitch_u = _pitch_ctrl.control_euler_rate(dt, control_input, bodyrate_ff(1));
+					float pitch_u = att_control(1);
 					_actuator_controls.control[actuator_controls_s::INDEX_PITCH] =
 						(PX4_ISFINITE(pitch_u)) ? pitch_u + trim_pitch : trim_pitch;
 
@@ -575,7 +580,7 @@ void FixedwingAttitudeControl::Run()
 						yaw_u = _wheel_ctrl.control_bodyrate(dt, control_input);
 
 					} else {
-						yaw_u = _yaw_ctrl.control_euler_rate(dt, control_input, bodyrate_ff(2));
+						yaw_u = att_control(2);
 					}
 
 					_actuator_controls.control[actuator_controls_s::INDEX_YAW] = (PX4_ISFINITE(yaw_u)) ? yaw_u + trim_yaw : trim_yaw;
@@ -586,7 +591,7 @@ void FixedwingAttitudeControl::Run()
 					}
 
 					if (!PX4_ISFINITE(yaw_u)) {
-						_yaw_ctrl.reset_integrator();
+						// _yaw_ctrl.reset_integrator();
 						_wheel_ctrl.reset_integrator();
 					}
 
