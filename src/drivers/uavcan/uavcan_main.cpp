@@ -866,7 +866,7 @@ UavcanNode::Run()
 		vehicle_command_s cmd{};
 		_vcmd_sub.copy(&cmd);
 
-		uint8_t cmd_ack_result = vehicle_command_ack_s::VEHICLE_RESULT_ACCEPTED;
+		uint8_t cmd_ack_result = vehicle_command_ack_s::VEHICLE_CMD_RESULT_ACCEPTED;
 
 		if (cmd.command == vehicle_command_s::VEHICLE_CMD_PREFLIGHT_STORAGE) {
 			acknowledge = true;
@@ -1200,7 +1200,8 @@ UavcanNode::param_count(uavcan::NodeID node_id)
 	req.index = 0;
 	int call_res = _param_getset_client.call(node_id, req);
 
-	if (call_res < 0) {
+	// -ErrInvalidParam is returned when no UAVCAN device is connected to the CAN bus
+	if ((call_res < 0) && (-uavcan::ErrInvalidParam != call_res)) {
 		PX4_ERR("couldn't start parameter count: %d", call_res);
 
 	} else {

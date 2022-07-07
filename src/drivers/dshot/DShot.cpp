@@ -624,7 +624,7 @@ void DShot::handle_vehicle_commands()
 			command_ack.command = vehicle_command.command;
 			command_ack.target_system = vehicle_command.source_system;
 			command_ack.target_component = vehicle_command.source_component;
-			command_ack.result = vehicle_command_s::VEHICLE_CMD_RESULT_UNSUPPORTED;
+			command_ack.result = vehicle_command_ack_s::VEHICLE_CMD_RESULT_UNSUPPORTED;
 
 			if (index != -1) {
 				PX4_DEBUG("setting command: index: %i type: %i", index, type);
@@ -646,7 +646,7 @@ void DShot::handle_vehicle_commands()
 					PX4_WARN("unknown command: %i", type);
 
 				} else {
-					command_ack.result = vehicle_command_s::VEHICLE_CMD_RESULT_ACCEPTED;
+					command_ack.result = vehicle_command_ack_s::VEHICLE_CMD_RESULT_ACCEPTED;
 					_current_command.motor_mask = 1 << index;
 					_current_command.num_repetitions = 10;
 					_current_command.save = true;
@@ -752,8 +752,8 @@ int DShot::custom_command(int argc, char *argv[])
 	};
 
 	constexpr VerbCommand commands[] = {
-		{"reverse", DShot_cmd_spin_direction_reversed, 10},
-		{"normal", DShot_cmd_spin_direction_normal, 10},
+		{"reverse", DShot_cmd_spin_direction_2, 10},
+		{"normal", DShot_cmd_spin_direction_1, 10},
 		{"save", DShot_cmd_save_settings, 10},
 		{"3d_on", DShot_cmd_3d_mode_on, 10},
 		{"3d_off", DShot_cmd_3d_mode_off, 10},

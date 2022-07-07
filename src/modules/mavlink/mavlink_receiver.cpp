@@ -89,12 +89,6 @@ MavlinkReceiver::MavlinkReceiver(Mavlink *parent) :
 	_parameters_manager(parent),
 	_mavlink_timesync(parent)
 {
-	_handle_sens_flow_maxhgt = param_find("SENS_FLOW_MAXHGT");
-	_handle_sens_flow_maxr = param_find("SENS_FLOW_MAXR");
-	_handle_sens_flow_minhgt = param_find("SENS_FLOW_MINHGT");
-	_handle_sens_flow_rot = param_find("SENS_FLOW_ROT");
-	_handle_ekf2_min_rng = param_find("EKF2_MIN_RNG");
-	_handle_ekf2_rng_a_hmax = param_find("EKF2_RNG_A_HMAX");
 }
 
 void
@@ -400,7 +394,7 @@ MavlinkReceiver::handle_message_command_long(mavlink_message_t *msg)
 		// This looks suspicously like INT32_MAX was sent in a COMMAND_LONG instead of
 		// a COMMAND_INT.
 		PX4_ERR("param5/param6 invalid of command %" PRIu16, cmd_mavlink.command);
-		acknowledge(msg->sysid, msg->compid, cmd_mavlink.command, vehicle_command_ack_s::VEHICLE_RESULT_DENIED);
+		acknowledge(msg->sysid, msg->compid, cmd_mavlink.command, vehicle_command_ack_s::VEHICLE_CMD_RESULT_DENIED);
 		return;
 	}
 
@@ -436,7 +430,7 @@ MavlinkReceiver::handle_message_command_int(mavlink_message_t *msg)
 	if (cmd_mavlink.x == 0x7ff80000 && cmd_mavlink.y == 0x7ff80000) {
 		// This looks like NAN was by accident sent as int.
 		PX4_ERR("x/y invalid of command %" PRIu16, cmd_mavlink.command);
-		acknowledge(msg->sysid, msg->compid, cmd_mavlink.command, vehicle_command_ack_s::VEHICLE_RESULT_DENIED);
+		acknowledge(msg->sysid, msg->compid, cmd_mavlink.command, vehicle_command_ack_s::VEHICLE_CMD_RESULT_DENIED);
 		return;
 	}
 
@@ -474,14 +468,14 @@ void MavlinkReceiver::handle_message_command_both(mavlink_message_t *msg, const 
 {
 	bool target_ok = evaluate_target_ok(cmd_mavlink.command, cmd_mavlink.target_system, cmd_mavlink.target_component);
 	bool send_ack = true;
-	uint8_t result = vehicle_command_ack_s::VEHICLE_RESULT_ACCEPTED;
+	uint8_t result = vehicle_command_ack_s::VEHICLE_CMD_RESULT_ACCEPTED;
 	uint8_t progress = 0; // TODO: should be 255, 0 for backwards compatibility
 
 	if (!target_ok) {
 		// Reject alien commands only if there is no forwarding or we've never seen target component before
 		if (!_mavlink->get_forwarding_on()
 		    || !_mavlink->component_was_seen(cmd_mavlink.target_system, cmd_mavlink.target_component, _mavlink)) {
-			acknowledge(msg->sysid, msg->compid, cmd_mavlink.command, vehicle_command_ack_s::VEHICLE_RESULT_FAILED);
+			acknowledge(msg->sysid, msg->compid, cmd_mavlink.command, vehicle_command_ack_s::VEHICLE_CMD_RESULT_FAILED);
 		}
 
 		return;
@@ -506,7 +500,7 @@ void MavlinkReceiver::handle_message_command_both(mavlink_message_t *msg, const 
 
 	} else if (cmd_mavlink.command == MAV_CMD_SET_MESSAGE_INTERVAL) {
 		if (set_message_interval((int)roundf(cmd_mavlink.param1), cmd_mavlink.param2, cmd_mavlink.param3)) {
-			result = vehicle_command_ack_s::VEHICLE_RESULT_FAILED;
+			result = vehicle_command_ack_s::VEHICLE_CMD_RESULT_FAILED;
 		}
 
 	} else if (cmd_mavlink.command == MAV_CMD_GET_MESSAGE_INTERVAL) {
@@ -547,7 +541,7 @@ void MavlinkReceiver::handle_message_command_both(mavlink_message_t *msg, const 
 			send_ack = false;
 
 		} else {
-			result = vehicle_command_ack_s::VEHICLE_RESULT_DENIED;
+			result = vehicle_command_ack_s::VEHICLE_CMD_RESULT_DENIED;
 			send_ack = true;
 		}
 
@@ -633,7 +627,7 @@ void MavlinkReceiver::handle_message_command_both(mavlink_message_t *msg, const 
 		if (has_module) {
 
 			// most are in progress
-			result = vehicle_command_ack_s::VEHICLE_RESULT_IN_PROGRESS;
+			result = vehicle_command_ack_s::VEHICLE_CMD_RESULT_IN_PROGRESS;
 
 			switch (status.state) {
 			case autotune_attitude_control_status_s::STATE_IDLE:
@@ -675,17 +669,17 @@ void MavlinkReceiver::handle_message_command_both(mavlink_message_t *msg, const 
 			case autotune_attitude_control_status_s::STATE_COMPLETE:
 				progress = 100;
 				// ack it properly with an ACCEPTED once we're done
-				result = vehicle_command_ack_s::VEHICLE_RESULT_ACCEPTED;
+				result = vehicle_command_ack_s::VEHICLE_CMD_RESULT_ACCEPTED;
 				break;
 
 			case autotune_attitude_control_status_s::STATE_FAIL:
 				progress = 0;
-				result = vehicle_command_ack_s::VEHICLE_RESULT_FAILED;
+				result = vehicle_command_ack_s::VEHICLE_CMD_RESULT_FAILED;
 				break;
 			}
 
 		} else {
-			result = vehicle_command_ack_s::VEHICLE_RESULT_UNSUPPORTED;
+			result = vehicle_command_ack_s::VEHICLE_CMD_RESULT_UNSUPPORTED;
 		}
 
 		send_ack = true;
@@ -704,7 +698,7 @@ void MavlinkReceiver::handle_message_command_both(mavlink_message_t *msg, const 
 			// on a radio link
 			if (_mavlink->get_data_rate() < 5000) {
 				send_ack = true;
-				result = vehicle_command_ack_s::VEHICLE_RESULT_DENIED;
+				result = vehicle_command_ack_s::VEHICLE_CMD_RESULT_DENIED;
 				_mavlink->send_statustext_critical("Not enough bandwidth to enable log streaming\t");
 				events::send<uint32_t>(events::ID("mavlink_log_not_enough_bw"), events::Log::Error,
 						       "Not enough bandwidth to enable log streaming ({1} \\< 5000)", _mavlink->get_data_rate());
@@ -759,7 +753,8 @@ uint8_t MavlinkReceiver::handle_request_message_command(uint16_t message_id, flo
 		}
 	}
 
-	return (message_sent ? vehicle_command_ack_s::VEHICLE_RESULT_ACCEPTED : vehicle_command_ack_s::VEHICLE_RESULT_DENIED);
+	return (message_sent ? vehicle_command_ack_s::VEHICLE_CMD_RESULT_ACCEPTED :
+		vehicle_command_ack_s::VEHICLE_CMD_RESULT_DENIED);
 }
 
 
@@ -795,105 +790,93 @@ MavlinkReceiver::handle_message_command_ack(mavlink_message_t *msg)
 void
 MavlinkReceiver::handle_message_optical_flow_rad(mavlink_message_t *msg)
 {
-	/* optical flow */
 	mavlink_optical_flow_rad_t flow;
 	mavlink_msg_optical_flow_rad_decode(msg, &flow);
 
-	optical_flow_s f{};
+	device::Device::DeviceId device_id;
+	device_id.devid_s.bus_type = device::Device::DeviceBusType::DeviceBusType_MAVLINK;
+	device_id.devid_s.bus = _mavlink->get_instance_id();
+	device_id.devid_s.address = msg->sysid;
+	device_id.devid_s.devtype = DRV_FLOW_DEVTYPE_MAVLINK;
 
-	f.timestamp = hrt_absolute_time();
-	f.time_since_last_sonar_update = flow.time_delta_distance_us;
-	f.integration_timespan  = flow.integration_time_us;
-	f.pixel_flow_x_integral = flow.integrated_x;
-	f.pixel_flow_y_integral = flow.integrated_y;
-	f.gyro_x_rate_integral  = flow.integrated_xgyro;
-	f.gyro_y_rate_integral  = flow.integrated_ygyro;
-	f.gyro_z_rate_integral  = flow.integrated_zgyro;
-	f.gyro_temperature      = flow.temperature;
-	f.ground_distance_m     = flow.distance;
-	f.quality               = flow.quality;
-	f.sensor_id             = flow.sensor_id;
-	f.max_flow_rate         = _param_sens_flow_maxr;
-	f.min_ground_distance   = _param_sens_flow_minhgt;
-	f.max_ground_distance   = _param_sens_flow_maxhgt;
+	sensor_optical_flow_s sensor_optical_flow{};
 
-	/* read flow sensor parameters */
-	const Rotation flow_rot = (Rotation)_param_sens_flow_rot;
+	sensor_optical_flow.timestamp_sample = hrt_absolute_time();
+	sensor_optical_flow.device_id = device_id.devid;
 
-	/* rotate measurements according to parameter */
-	float zero_val = 0.0f;
-	rotate_3f(flow_rot, f.pixel_flow_x_integral, f.pixel_flow_y_integral, zero_val);
-	rotate_3f(flow_rot, f.gyro_x_rate_integral, f.gyro_y_rate_integral, f.gyro_z_rate_integral);
+	sensor_optical_flow.pixel_flow[0] = flow.integrated_x;
+	sensor_optical_flow.pixel_flow[1] = flow.integrated_y;
 
-	_flow_pub.publish(f);
+	sensor_optical_flow.integration_timespan_us = flow.integration_time_us;
+	sensor_optical_flow.quality = flow.quality;
 
-	/* Use distance value for distance sensor topic */
-	if (flow.distance > 0.0f) { // negative values signal invalid data
-
-		distance_sensor_s d{};
-
-		device::Device::DeviceId device_id;
-		device_id.devid_s.bus = device::Device::DeviceBusType::DeviceBusType_MAVLINK;
-		device_id.devid_s.devtype = DRV_DIST_DEVTYPE_MAVLINK;
-		device_id.devid_s.address = msg->sysid;
-
-		d.timestamp = f.timestamp;
-		d.min_distance = _param_ekf2_min_rng;
-		d.max_distance = _param_ekf2_rng_a_hmax;
-		d.current_distance = flow.distance; /* both are in m */
-		d.type = distance_sensor_s::MAV_DISTANCE_SENSOR_ULTRASOUND;
-		d.device_id = device_id.devid;
-		d.orientation = distance_sensor_s::ROTATION_DOWNWARD_FACING;
-		d.variance = 0.01;
-		d.signal_quality = -1;
-
-		_flow_distance_sensor_pub.publish(d);
+	if (PX4_ISFINITE(flow.integrated_xgyro) && PX4_ISFINITE(flow.integrated_ygyro) && PX4_ISFINITE(flow.integrated_zgyro)) {
+		sensor_optical_flow.delta_angle[0] = flow.integrated_xgyro;
+		sensor_optical_flow.delta_angle[1] = flow.integrated_ygyro;
+		sensor_optical_flow.delta_angle[2] = flow.integrated_zgyro;
+		sensor_optical_flow.delta_angle_available = true;
 	}
+
+	sensor_optical_flow.max_flow_rate       = NAN;
+	sensor_optical_flow.min_ground_distance = NAN;
+	sensor_optical_flow.max_ground_distance = NAN;
+
+	// Use distance value for distance sensor topic
+	if (PX4_ISFINITE(flow.distance) && (flow.distance >= 0.f)) {
+		// Positive value (including zero): distance known. Negative value: Unknown distance.
+		sensor_optical_flow.distance_m = flow.distance;
+		sensor_optical_flow.distance_available = true;
+	}
+
+	sensor_optical_flow.timestamp = hrt_absolute_time();
+
+	_sensor_optical_flow_pub.publish(sensor_optical_flow);
 }
 
 void
 MavlinkReceiver::handle_message_hil_optical_flow(mavlink_message_t *msg)
 {
-	/* optical flow */
 	mavlink_hil_optical_flow_t flow;
 	mavlink_msg_hil_optical_flow_decode(msg, &flow);
 
-	optical_flow_s f{};
-
-	f.timestamp = hrt_absolute_time(); // XXX we rely on the system time for now and not flow.time_usec;
-	f.integration_timespan = flow.integration_time_us;
-	f.pixel_flow_x_integral = flow.integrated_x;
-	f.pixel_flow_y_integral = flow.integrated_y;
-	f.gyro_x_rate_integral = flow.integrated_xgyro;
-	f.gyro_y_rate_integral = flow.integrated_ygyro;
-	f.gyro_z_rate_integral = flow.integrated_zgyro;
-	f.time_since_last_sonar_update = flow.time_delta_distance_us;
-	f.ground_distance_m = flow.distance;
-	f.quality = flow.quality;
-	f.sensor_id = flow.sensor_id;
-	f.gyro_temperature = flow.temperature;
-
-	_flow_pub.publish(f);
-
-	/* Use distance value for distance sensor topic */
-	distance_sensor_s d{};
-
 	device::Device::DeviceId device_id;
-	device_id.devid_s.bus = device::Device::DeviceBusType::DeviceBusType_MAVLINK;
-	device_id.devid_s.devtype = DRV_DIST_DEVTYPE_MAVLINK;
+	device_id.devid_s.bus_type = device::Device::DeviceBusType::DeviceBusType_MAVLINK;
+	device_id.devid_s.bus = _mavlink->get_instance_id();
 	device_id.devid_s.address = msg->sysid;
+	device_id.devid_s.devtype = DRV_FLOW_DEVTYPE_SIM;
 
-	d.timestamp = hrt_absolute_time();
-	d.min_distance = 0.3f;
-	d.max_distance = 5.0f;
-	d.current_distance = flow.distance; /* both are in m */
-	d.type = distance_sensor_s::MAV_DISTANCE_SENSOR_LASER;
-	d.device_id = device_id.devid;
-	d.orientation = distance_sensor_s::ROTATION_DOWNWARD_FACING;
-	d.variance = 0.01;
-	d.signal_quality = -1;
+	sensor_optical_flow_s sensor_optical_flow{};
 
-	_flow_distance_sensor_pub.publish(d);
+	sensor_optical_flow.timestamp_sample = hrt_absolute_time();
+	sensor_optical_flow.device_id = device_id.devid;
+
+	sensor_optical_flow.pixel_flow[0] = flow.integrated_x;
+	sensor_optical_flow.pixel_flow[1] = flow.integrated_y;
+
+	sensor_optical_flow.integration_timespan_us = flow.integration_time_us;
+	sensor_optical_flow.quality = flow.quality;
+
+	if (PX4_ISFINITE(flow.integrated_xgyro) && PX4_ISFINITE(flow.integrated_ygyro) && PX4_ISFINITE(flow.integrated_zgyro)) {
+		sensor_optical_flow.delta_angle[0] = flow.integrated_xgyro;
+		sensor_optical_flow.delta_angle[1] = flow.integrated_ygyro;
+		sensor_optical_flow.delta_angle[2] = flow.integrated_zgyro;
+		sensor_optical_flow.delta_angle_available = true;
+	}
+
+	sensor_optical_flow.max_flow_rate       = NAN;
+	sensor_optical_flow.min_ground_distance = NAN;
+	sensor_optical_flow.max_ground_distance = NAN;
+
+	// Use distance value for distance sensor topic
+	if (PX4_ISFINITE(flow.distance) && (flow.distance >= 0.f)) {
+		// Positive value (including zero): distance known. Negative value: Unknown distance.
+		sensor_optical_flow.distance_m = flow.distance;
+		sensor_optical_flow.distance_available = true;
+	}
+
+	sensor_optical_flow.timestamp = hrt_absolute_time();
+
+	_sensor_optical_flow_pub.publish(sensor_optical_flow);
 }
 
 void
@@ -934,9 +917,10 @@ MavlinkReceiver::handle_message_distance_sensor(mavlink_message_t *msg)
 	distance_sensor_s ds{};
 
 	device::Device::DeviceId device_id;
-	device_id.devid_s.bus = device::Device::DeviceBusType::DeviceBusType_MAVLINK;
+	device_id.devid_s.bus_type = device::Device::DeviceBusType::DeviceBusType_MAVLINK;
+	device_id.devid_s.bus = _mavlink->get_instance_id();
+	device_id.devid_s.address = msg->sysid;
 	device_id.devid_s.devtype = DRV_DIST_DEVTYPE_MAVLINK;
-	device_id.devid_s.address = dist_sensor.id;
 
 	ds.timestamp        = hrt_absolute_time(); /* Use system time for now, don't trust sender to attach correct timestamp */
 	ds.min_distance     = static_cast<float>(dist_sensor.min_distance) * 1e-2f;     /* cm to m */
@@ -1778,6 +1762,7 @@ MavlinkReceiver::handle_message_serial_control(mavlink_message_t *msg)
 	if (shell) {
 		// we ignore the timeout, EXCLUSIVE & BLOCKING flags of the SERIAL_CONTROL message
 		if (serial_control_mavlink.count > 0) {
+			shell->setTargetID(msg->sysid, msg->compid);
 			shell->write(serial_control_mavlink.data, serial_control_mavlink.count);
 		}
 
@@ -2337,10 +2322,12 @@ MavlinkReceiver::handle_message_hil_gps(mavlink_message_t *msg)
 
 	sensor_gps_s gps{};
 
-	device::Device::DeviceId device_id{};
+	device::Device::DeviceId device_id;
 	device_id.devid_s.bus_type = device::Device::DeviceBusType::DeviceBusType_MAVLINK;
+	device_id.devid_s.bus = _mavlink->get_instance_id();
 	device_id.devid_s.address = msg->sysid;
 	device_id.devid_s.devtype = DRV_GPS_DEVTYPE_SIM;
+
 	gps.device_id = device_id.devid;
 
 	gps.lat = hil_gps.lat;
@@ -3474,30 +3461,6 @@ MavlinkReceiver::updateParams()
 {
 	// update parameters from storage
 	ModuleParams::updateParams();
-
-	if (_handle_sens_flow_maxhgt != PARAM_INVALID) {
-		param_get(_handle_sens_flow_maxhgt, &_param_sens_flow_maxhgt);
-	}
-
-	if (_handle_sens_flow_maxr != PARAM_INVALID) {
-		param_get(_handle_sens_flow_maxr, &_param_sens_flow_maxr);
-	}
-
-	if (_handle_sens_flow_minhgt != PARAM_INVALID) {
-		param_get(_handle_sens_flow_minhgt, &_param_sens_flow_minhgt);
-	}
-
-	if (_handle_sens_flow_rot != PARAM_INVALID) {
-		param_get(_handle_sens_flow_rot, &_param_sens_flow_rot);
-	}
-
-	if (_handle_ekf2_min_rng != PARAM_INVALID) {
-		param_get(_handle_ekf2_min_rng, &_param_ekf2_min_rng);
-	}
-
-	if (_handle_ekf2_rng_a_hmax != PARAM_INVALID) {
-		param_get(_handle_ekf2_rng_a_hmax, &_param_ekf2_rng_a_hmax);
-	}
 }
 
 void *MavlinkReceiver::start_trampoline(void *context)

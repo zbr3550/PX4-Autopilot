@@ -104,9 +104,12 @@ public:
 
 	const Vector2f &getFlowVelBody() const { return _flow_vel_body; }
 	const Vector2f &getFlowVelNE() const { return _flow_vel_ne; }
+
 	const Vector2f &getFlowCompensated() const { return _flow_compensated_XY_rad; }
 	const Vector2f &getFlowUncompensated() const { return _flow_sample_delayed.flow_xy_rad; }
-	const Vector3f &getFlowGyro() const { return _flow_sample_delayed.gyro_xyz; }
+
+	const Vector3f getFlowGyro() const { return _flow_sample_delayed.gyro_xyz * (1.f / _flow_sample_delayed.dt); }
+	const Vector3f &getFlowGyroIntegral() const { return _flow_sample_delayed.gyro_xyz; }
 
 	void getHeadingInnov(float &heading_innov) const { heading_innov = _heading_innov; }
 	void getHeadingInnovVar(float &heading_innov_var) const { heading_innov_var = _heading_innov_var; }
@@ -120,9 +123,9 @@ public:
 	void getDragInnovVar(float drag_innov_var[2]) const { _drag_innov_var.copyTo(drag_innov_var); }
 	void getDragInnovRatio(float drag_innov_ratio[2]) const { _drag_test_ratio.copyTo(drag_innov_ratio); }
 
-	void getAirspeedInnov(float &airspeed_innov) const { airspeed_innov = _airspeed_innov; }
-	void getAirspeedInnovVar(float &airspeed_innov_var) const { airspeed_innov_var = _airspeed_innov_var; }
-	void getAirspeedInnovRatio(float &airspeed_innov_ratio) const { airspeed_innov_ratio = _tas_test_ratio; }
+	void getAirspeedInnov(float &airspeed_innov) const { airspeed_innov = _aid_src_airspeed.innovation; }
+	void getAirspeedInnovVar(float &airspeed_innov_var) const { airspeed_innov_var = _aid_src_airspeed.innovation_variance; }
+	void getAirspeedInnovRatio(float &airspeed_innov_ratio) const { airspeed_innov_ratio = _aid_src_airspeed.test_ratio; }
 
 	void getBetaInnov(float &beta_innov) const { beta_innov = _beta_innov; }
 	void getBetaInnovVar(float &beta_innov_var) const { beta_innov_var = _beta_innov_var; }
@@ -169,9 +172,9 @@ public:
 	// get the ekf WGS-84 origin position and height and the system time it was last set
 	// return true if the origin is valid
 	bool getEkfGlobalOrigin(uint64_t &origin_time, double &latitude, double &longitude, float &origin_alt) const;
-	void setEkfGlobalOrigin(const double latitude, const double longitude, const float altitude);
+	bool setEkfGlobalOrigin(const double latitude, const double longitude, const float altitude);
 
-	float getEkfGlobalOriginAltitude() const { return _gps_alt_ref; }
+	float getEkfGlobalOriginAltitude() const { return PX4_ISFINITE(_gps_alt_ref) ? _gps_alt_ref : 0.f; }
 	bool setEkfGlobalOriginAltitude(const float altitude);
 
 
@@ -193,7 +196,8 @@ public:
 	void resetAccelBias();
 
 	// Reset all magnetometer bias states and covariances to initial alignment values.
-	void resetMagBias();
+	// Requests full mag yaw reset (if using mag)
+	void resetMagBiasAndYaw();
 
 	Vector3f getVelocityVariance() const { return P.slice<3, 3>(4, 4).diag(); };
 
@@ -338,7 +342,12 @@ public:
 	bool getDataEKFGSF(float *yaw_composite, float *yaw_variance, float yaw[N_MODELS_EKFGSF],
 			   float innov_VN[N_MODELS_EKFGSF], float innov_VE[N_MODELS_EKFGSF], float weight[N_MODELS_EKFGSF]);
 
+	// Returns true if the output of the yaw emergency estimator can be used for a reset
+	bool isYawEmergencyEstimateAvailable() const;
+
 	const BaroBiasEstimator::status &getBaroBiasEstimatorStatus() const { return _baro_b_est.getStatus(); }
+
+	const auto &aid_src_airspeed() const { return _aid_src_airspeed; }
 
 	const auto &aid_src_baro_hgt() const { return _aid_src_baro_hgt; }
 	const auto &aid_src_rng_hgt() const { return _aid_src_rng_hgt; }
@@ -407,7 +416,6 @@ private:
 
 	uint64_t _time_last_of_fuse{0};		///< time the last fusion of optical flow measurements were performed (uSec)
 	uint64_t _time_last_flow_terrain_fuse{0}; ///< time the last fusion of optical flow measurements for terrain estimation were performed (uSec)
-	uint64_t _time_last_arsp_fuse{0};	///< time the last fusion of airspeed measurements were performed (uSec)
 	uint64_t _time_last_beta_fuse{0};	///< time the last fusion of synthetic sideslip measurements were performed (uSec)
 	uint64_t _time_last_zero_velocity_fuse{0}; ///< last time of zero velocity update (uSec)
 	uint64_t _time_last_gps_yaw_fuse{0};	///< time the last fusion of GPS yaw measurements were performed (uSec)
@@ -470,9 +478,6 @@ private:
 	Vector2f _drag_innov{};		///< multirotor drag measurement innovation (m/sec**2)
 	Vector2f _drag_innov_var{};	///< multirotor drag measurement innovation variance ((m/sec**2)**2)
 
-	float _airspeed_innov{0.0f};		///< airspeed measurement innovation (m/sec)
-	float _airspeed_innov_var{0.0f};	///< airspeed measurement innovation variance ((m/sec)**2)
-
 	float _beta_innov{0.0f};	///< synthetic sideslip measurement innovation (rad)
 	float _beta_innov_var{0.0f};	///< synthetic sideslip measurement innovation variance (rad**2)
 
@@ -495,6 +500,7 @@ private:
 
 	estimator_aid_source_1d_s _aid_src_baro_hgt{};
 	estimator_aid_source_1d_s _aid_src_rng_hgt{};
+	estimator_aid_source_1d_s _aid_src_airspeed{};
 
 	estimator_aid_source_2d_s _aid_src_fake_pos{};
 
@@ -520,7 +526,7 @@ private:
 
 	// Variables used to publish the WGS-84 location of the EKF local NED origin
 	uint64_t _last_gps_origin_time_us{0};	///< time the origin was last set (uSec)
-	float _gps_alt_ref{0.0f};		///< WGS-84 height (m)
+	float _gps_alt_ref{NAN};		///< WGS-84 height (m)
 
 	// Variables used by the initial filter alignment
 	bool _is_first_imu_sample{true};
@@ -620,8 +626,8 @@ private:
 	// apply sensible limits to the declination and length of the NE mag field states estimates
 	void limitDeclination();
 
-	// fuse airspeed measurement
-	void fuseAirspeed();
+	void updateAirspeed(const airspeedSample &airspeed_sample, estimator_aid_source_1d_s &airspeed) const;
+	void fuseAirspeed(estimator_aid_source_1d_s &airspeed);
 
 	// fuse synthetic zero sideslip measurement
 	void fuseSideslip();
@@ -1047,9 +1053,6 @@ private:
 	// Resets the horizontal velocity and position to the default navigation sensor
 	// Returns true if the reset was successful
 	bool resetYawToEKFGSF();
-
-	// Returns true if the output of the yaw emergency estimator can be used for a reset
-	bool isYawEmergencyEstimateAvailable() const;
 
 	void resetGpsDriftCheckFilters();
 

@@ -2339,7 +2339,7 @@ Mavlink::task_main(int argc, char *argv[])
 						// send positive command ack
 						vehicle_command_ack_s command_ack{};
 						command_ack.command = vehicle_cmd.command;
-						command_ack.result = vehicle_command_ack_s::VEHICLE_RESULT_ACCEPTED;
+						command_ack.result = vehicle_command_ack_s::VEHICLE_CMD_RESULT_ACCEPTED;
 						command_ack.from_external = !vehicle_cmd.from_external;
 						command_ack.target_system = vehicle_cmd.source_system;
 						command_ack.target_component = vehicle_cmd.source_component;
@@ -2386,7 +2386,7 @@ Mavlink::task_main(int argc, char *argv[])
 							cmd_logging_start_acknowledgement = true;
 
 						} else if (command_ack.command == vehicle_command_s::VEHICLE_CMD_LOGGING_STOP
-							   && command_ack.result == vehicle_command_ack_s::VEHICLE_RESULT_ACCEPTED) {
+							   && command_ack.result == vehicle_command_ack_s::VEHICLE_CMD_RESULT_ACCEPTED) {
 							cmd_logging_stop_acknowledgement = true;
 						}
 					}
@@ -2427,6 +2427,8 @@ Mavlink::task_main(int argc, char *argv[])
 				msg.timeout = 0;
 				msg.device = SERIAL_CONTROL_DEV_SHELL;
 				msg.count = _mavlink_shell->read(msg.data, sizeof(msg.data));
+				msg.target_system = _mavlink_shell->targetSysid();
+				msg.target_component = _mavlink_shell->targetCompid();
 				mavlink_msg_serial_control_send_struct(get_channel(), &msg);
 			}
 		}
